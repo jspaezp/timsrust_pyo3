@@ -12,5 +12,16 @@ classifiers = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+  "pytest-datadir",
+]
+lint = [
+  "black",
+  "ruff"
+]
+
 [tool.maturin]
 features = ["pyo3/extension-module"]

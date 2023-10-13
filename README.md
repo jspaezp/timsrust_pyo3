@@ -20,6 +20,6 @@ PyFrame(index=1, rt=0.33491, frame_type=0, len(scan_offsets)=710, len(tof_indice
 
 >>> reader = timsrust_pyo3.TDFReader("some_file.d")
 >>> all_frames = reader.read_all_frames()
->>> tfr.resolve_mzs(foo[0].tof_indices())
+>>> tfr.resolve_mzs(all_frames[0].tof_indices())
 [...] # list[float]
 ```

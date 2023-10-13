@@ -1,0 +1,9 @@
+
+
+# Description of the test data provenance.
+
+## 230711_idleflow_400-1000mz_25mz_diaPasef_10sec.d
+
+This file was generated using a timstof scp with only idle flow
+running for 10 seconds using the instrument control. Graciously
+providede by Dr. Daniele Canzani.
