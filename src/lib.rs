@@ -3,6 +3,43 @@ use crate::timsrust::FrameType;
 //use crate::timsrust::converters::{Frame2RtConverter, Tof2MzConverter, Scan2ImConverter};
 use pyo3::prelude::*;
 use timsrust;
+use timsrust::ReadableFrames;
+use timsrust::ConvertableIndex;
+
+
+#[pyclass]
+struct TDFReader {
+    pub reader: timsrust::TDFReader,
+}
+
+
+#[pymethods]
+impl TDFReader {
+    #[new]
+    fn new(path: String) -> Self {
+        TDFReader {
+            reader: timsrust::TDFReader::new(&path),
+        }
+    }
+    fn read_all_frames(&self) -> Vec<PyFrame> {
+        self.reader
+            .read_all_frames()
+            .iter()
+            .map(|x| PyFrame::new(x.clone()))
+            .collect()
+    }
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        let class_name: &str = slf.get_type().name()?;
+        Ok(format!(
+            "{}(path={})",
+            class_name,
+            slf.borrow().reader.path
+        ))
+    }
+    fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> Vec<f64> {
+        tofs.iter().map(|tof| slf.borrow().reader.mz_converter.convert(*tof)).collect()
+    }
+}
 
 #[pyclass]
 struct PyFrame {
@@ -71,7 +108,7 @@ impl PyFrame {
 /// Formats the sum of two numbers as string.
 #[pyfunction]
 fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
-    let fr = timsrust::FileReader::new(a);
+    let fr = timsrust::TDFReader::new(&a);
     let out: Vec<PyFrame> = fr
         .read_all_frames()
         .iter()
@@ -84,5 +121,7 @@ fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
 #[pymodule]
 fn timsrust_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(read_all_frames, m)?)?;
+    m.add_class::<TDFReader>()?;
+    m.add_class::<PyFrame>()?;
     Ok(())
 }
