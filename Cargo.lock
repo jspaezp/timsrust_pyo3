@@ -984,7 +984,7 @@ dependencies = [
 [[package]]
 name = "timsrust"
 version = "0.1.7"
-source = "git+https://github.com/jspaezp/timsrust?branch=feature/expose_converters#c99063f6a09e023e575ed34fb191066e1c3ff22d"
+source = "git+https://github.com/jspaezp/timsrust?branch=feature/expose_converters#a1e11a938d3bae367f01d9ce1cb6f270a6d91ec2"
 dependencies = [
  "bytemuck",
  "byteorder",

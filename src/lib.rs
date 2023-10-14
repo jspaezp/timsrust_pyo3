@@ -1,17 +1,18 @@
+use std::collections::HashMap;
+
 use crate::timsrust::Frame;
 use crate::timsrust::FrameType;
 //use crate::timsrust::converters::{Frame2RtConverter, Tof2MzConverter, Scan2ImConverter};
 use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
 use timsrust;
-use timsrust::ReadableFrames;
 use timsrust::ConvertableIndex;
-
+use timsrust::ReadableFrames;
 
 #[pyclass]
 struct TDFReader {
     pub reader: timsrust::TDFReader,
 }
-
 
 #[pymethods]
 impl TDFReader {
@@ -28,16 +29,75 @@ impl TDFReader {
             .map(|x| PyFrame::new(x.clone()))
             .collect()
     }
+
+    fn read_frame(&self, index: usize) -> PyFrame {
+        PyFrame::new(&self.reader.read_single_frame(index))
+    }
+
+    fn read_dia_frames(&self) -> Vec<PyFrame> {
+        self.reader
+            .read_all_dia_frames()
+            .iter()
+            .map(|x| PyFrame::new(x.clone()))
+            .collect()
+    }
+
+    fn read_ms1_frames(&self) -> Vec<PyFrame> {
+        self.reader
+            .read_all_ms1_frames()
+            .iter()
+            .map(|x| PyFrame::new(x.clone()))
+            .collect()
+    }
+
+    fn dia_frame_table(&self) -> HashMap<String, Vec<usize>> {
+        let frametable = &self.reader.dia_frame_table;
+        let mut frametable_out: HashMap<String, Vec<usize>> = HashMap::new();
+
+        frametable_out.insert("frame".to_string(), frametable.frame.to_owned());
+        frametable_out.insert("group".to_string(), frametable.group.to_owned());
+
+        frametable_out
+    }
+
+    fn dia_frame_msms_windows(&self, py: Python) -> PyResult<PyObject> {
+        let msms_frame_window_table = &self.reader.dia_frame_msms_table;
+
+        let key_vals: &[(&str, PyObject)] = &[
+            (
+                "group",
+                msms_frame_window_table.group.to_owned().to_object(py),
+            ),
+            (
+                "scan_start",
+                msms_frame_window_table.scan_start.to_owned().to_object(py),
+            ),
+            (
+                "scan_end",
+                msms_frame_window_table.scan_end.to_owned().to_object(py),
+            ),
+            (
+                "mz_center",
+                msms_frame_window_table.mz_center.to_owned().to_object(py),
+            ),
+            (
+                "mz_width",
+                msms_frame_window_table.mz_width.to_owned().to_object(py),
+            ),
+        ];
+
+        let dict = key_vals.into_py_dict(py);
+        Ok(dict.into())
+    }
+
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
-        Ok(format!(
-            "{}(path={})",
-            class_name,
-            slf.borrow().reader.path
-        ))
+        Ok(format!("{}(path={})", class_name, slf.borrow().reader.path))
     }
     fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> Vec<f64> {
-        tofs.iter().map(|tof| slf.borrow().reader.mz_converter.convert(*tof)).collect()
+        tofs.iter()
+            .map(|tof| slf.borrow().reader.mz_converter.convert(*tof))
+            .collect()
     }
 }
 
@@ -109,6 +169,7 @@ impl PyFrame {
 #[pyfunction]
 fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
     let fr = timsrust::TDFReader::new(&a);
+
     let out: Vec<PyFrame> = fr
         .read_all_frames()
         .iter()
