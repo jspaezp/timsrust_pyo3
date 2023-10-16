@@ -17,10 +17,12 @@ def test_file_reader(shared_datadir):
     assert all(isinstance(f, timsrust_pyo3.PyFrame) for f in all_frames)
 
     dia_frames = reader.read_dia_frames()
+    assert all(f.frame_type() == 2 for f in dia_frames)
     assert all(isinstance(f, timsrust_pyo3.PyFrame) for f in dia_frames)
     assert len(dia_frames) < len(all_frames)
 
     ms1_frames = reader.read_ms1_frames()
+    assert all(f.frame_type() == 0 for f in ms1_frames)
     assert all(isinstance(f, timsrust_pyo3.PyFrame) for f in ms1_frames)
     assert len(ms1_frames) < len(all_frames)
     assert len(ms1_frames) < len(dia_frames)
