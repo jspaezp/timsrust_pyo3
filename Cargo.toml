@@ -11,5 +11,5 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.19.0"
 # timsrust = "0.1.7"
-timsrust = {git = "https://github.com/jspaezp/timsrust", branch= "feature/expose_converters"}
-# timsrust = {path = "../timsrust"}
+timsrust = {git = "https://github.com/jspaezp/timsrust"}
+# timsrust = { path = "../timsrust" }

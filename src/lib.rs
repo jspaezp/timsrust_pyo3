@@ -1,12 +1,17 @@
 use std::collections::HashMap;
 
+use crate::timsrust::Spectrum;
 use crate::timsrust::Frame;
 use crate::timsrust::FrameType;
+use pyo3::ffi::PyPreConfig_InitIsolatedConfig;
 //use crate::timsrust::converters::{Frame2RtConverter, Tof2MzConverter, Scan2ImConverter};
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use timsrust;
+use timsrust::AcquisitionType;
 use timsrust::ConvertableIndex;
+use timsrust::Precursor;
+use timsrust::PrecursorType;
 use timsrust::ReadableFrames;
 
 #[pyclass]
@@ -26,9 +31,13 @@ impl TDFReader {
         self.reader
             .read_all_frames()
             .iter()
-            .map(|x| PyFrame::new(x.clone()))
+            .map(|x| PyFrame::new(x))
             .collect()
     }
+
+    // fn read_scan(&self, index: usize) -> PySpectrum {
+    //     self.reader.read_all
+    // }
 
     fn read_frame(&self, index: usize) -> PyFrame {
         PyFrame::new(&self.reader.read_single_frame(index))
@@ -38,7 +47,7 @@ impl TDFReader {
         self.reader
             .read_all_dia_frames()
             .iter()
-            .map(|x| PyFrame::new(x.clone()))
+            .map(|x| PyFrame::new(x))
             .collect()
     }
 
@@ -46,7 +55,7 @@ impl TDFReader {
         self.reader
             .read_all_ms1_frames()
             .iter()
-            .map(|x| PyFrame::new(x.clone()))
+            .map(|x| PyFrame::new(x))
             .collect()
     }
 
@@ -102,6 +111,59 @@ impl TDFReader {
 }
 
 #[pyclass]
+struct PySpectrum {
+    pub mz_values: Vec<f64>,
+    pub intensities: Vec<f64>,
+    pub index: usize,
+    pub precursor: PyPrecursor,
+}
+
+#[pyclass]
+struct PyPrecursor {
+    pub mz: f64,
+    pub im: f64,
+    pub charge: usize,
+    pub intensity: f64,
+    pub index: usize,
+    pub frame_index: usize,
+}
+
+impl PyPrecursor {
+    fn new(precursor: &timsrust::Precursor) -> Self {
+        PyPrecursor {
+            mz: precursor.mz.to_owned(),
+            im: precursor.im.to_owned(),
+            charge: precursor.charge.to_owned(),
+            intensity: precursor.intensity.to_owned(),
+            index: precursor.index.to_owned(),
+            frame_index: precursor.frame_index.to_owned(),
+        }
+    }
+}
+
+impl PySpectrum {
+    fn new(scan: &Spectrum) -> Self {
+        let precursor = match scan.precursor {
+            PrecursorType::Precursor(x) => PyPrecursor::new(&x),
+            PrecursorType::None => PyPrecursor {
+                mz: 0.0,
+                im: 0.0,
+                charge: 0,
+                intensity: 0.0,
+                index: 0,
+                frame_index: 0,
+            },
+        };
+        PySpectrum {
+            mz_values: scan.mz_values.to_owned(),
+            intensities: scan.intensities.to_owned(),
+            index: scan.index.to_owned(),
+            precursor: precursor,
+        }
+    }
+}
+
+#[pyclass]
 struct PyFrame {
     pub scan_offsets: Vec<u64>,
     pub tof_indices: Vec<u32>,
@@ -115,8 +177,13 @@ impl PyFrame {
     fn new(frame: &Frame) -> Self {
         let frametype = match frame.frame_type {
             FrameType::MS1 => 0,
-            FrameType::MS2DDA => 1,
-            FrameType::MS2DIA => 2,
+            FrameType::MS2(x) => {
+                match x {
+                    AcquisitionType::DDAPASEF => 1,
+                    AcquisitionType::DIAPASEF => 2,
+                    AcquisitionType::Unknown => 3,
+                }
+            }
             FrameType::Unknown => 3,
         };
         PyFrame {
@@ -173,7 +240,7 @@ fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
     let out: Vec<PyFrame> = fr
         .read_all_frames()
         .iter()
-        .map(|x| PyFrame::new(x.clone()))
+        .map(|x| PyFrame::new(x))
         .collect();
     Ok(out)
 }

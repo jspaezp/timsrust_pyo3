@@ -971,6 +971,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d0e916b1148c8e263850e1ebcbd046f333e0683c724876bb0da63ea4373dc8a"
 
 [[package]]
+name = "thiserror"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9a7210f5c9a7156bb50aa36aed4c95afb51df0df00713949448cf9e97d382d2"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "thrift"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -983,8 +1003,8 @@ dependencies = [
 
 [[package]]
 name = "timsrust"
-version = "0.1.7"
-source = "git+https://github.com/jspaezp/timsrust?branch=feature/expose_converters#a1e11a938d3bae367f01d9ce1cb6f270a6d91ec2"
+version = "0.2.1"
+source = "git+https://github.com/jspaezp/timsrust#4ac26bd92fe6b30ac408ff635b1c07cb540e09df"
 dependencies = [
  "bytemuck",
  "byteorder",
@@ -992,6 +1012,7 @@ dependencies = [
  "parquet",
  "rayon",
  "rusqlite",
+ "thiserror",
  "zstd",
 ]
 
