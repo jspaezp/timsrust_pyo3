@@ -13,6 +13,7 @@ use timsrust::QuadrupoleEvent;
 
 #[pyclass]
 struct TimsReader {
+    #[pyo3(get)]
     pub path: String,
     pub reader: timsrust::FileReader,
 }
