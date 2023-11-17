@@ -1003,8 +1003,9 @@ dependencies = [
 
 [[package]]
 name = "timsrust"
-version = "0.2.1"
-source = "git+https://github.com/jspaezp/timsrust#4ac26bd92fe6b30ac408ff635b1c07cb540e09df"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a0791ad8b3836b6a582b1bfb563c04d0e09acdaf85e45c16d3158a0bcb164b6"
 dependencies = [
  "bytemuck",
  "byteorder",

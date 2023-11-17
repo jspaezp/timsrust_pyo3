@@ -10,6 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-# timsrust = "0.1.7"
-timsrust = {git = "https://github.com/jspaezp/timsrust"}
-# timsrust = { path = "../timsrust" }
+timsrust = "0.2.2"
