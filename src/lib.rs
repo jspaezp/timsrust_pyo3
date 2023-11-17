@@ -296,7 +296,6 @@ impl PyFrame {
     }
 }
 
-/// Formats the sum of two numbers as string.
 #[pyfunction]
 fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
     let fr = timsrust::FileReader::new(&a);
@@ -309,7 +308,6 @@ fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
     Ok(out)
 }
 
-/// A Python module implemented in Rust.
 #[pymodule]
 fn timsrust_pyo3(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(read_all_frames, m)?)?;
