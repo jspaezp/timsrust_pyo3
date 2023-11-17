@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::Display;
 
 use crate::timsrust::Spectrum;
@@ -6,7 +5,6 @@ use crate::timsrust::Frame;
 use crate::timsrust::FrameType;
 use crate::timsrust::ConvertableIndex;
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
 use timsrust;
 use timsrust::AcquisitionType;
 use timsrust::QuadrupoleEvent;
@@ -26,8 +24,7 @@ impl TimsReader {
         let reader = timsrust::FileReader::new(&path);
         match reader {
             Ok(x) => Ok(TimsReader { reader: x, path: path }),
-            Err(x) => Err(PyIOError::new_err("Could not open file")),
-            
+            Err(_) => Err(PyIOError::new_err("Could not open file")),
         }
     }
     fn read_all_frames(&self) -> Vec<PyFrame> {
