@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use crate::timsrust::Spectrum;
 use crate::timsrust::Frame;
@@ -44,20 +45,39 @@ impl TimsReader {
         PyFrame::new(&self.reader.read_single_frame(index))
     }
 
+    fn read_spectrum(&self, index: usize) -> PySpectrum {
+        PySpectrum::new(&self.reader.read_single_spectrum(index))
+    }
+
     fn read_dia_frames(&self) -> Vec<PyFrame> {
         self.reader
-            .read_all_frames()
+            .read_all_ms2_frames()
             .iter()
-            .filter(|x| x.frame_type == FrameType::MS2(AcquisitionType::DIAPASEF))
-            .map(|x| PyFrame::new(x))
+            .map(|x| 
+                match x.frame_type {
+                    FrameType::MS2(AcquisitionType::DIAPASEF) => PyFrame::new(x),
+                    _ => PyFrame::new(&Frame::default()),
+                })
             .collect()
     }
 
+    /// Reads all MS1 frames
+    /// 
+    /// Returns a vec with its length being all the frames in the data.
+    /// BUT only parses the MS1 frames (all non-ms1 frames are returned as empty)
     fn read_ms1_frames(&self) -> Vec<PyFrame> {
         self.reader
             .read_all_ms1_frames()
             .iter()
             .map(|x| PyFrame::new(x))
+            .collect()
+    }
+
+    fn read_all_spectra(&self) -> Vec<PySpectrum> {
+        self.reader
+            .read_all_spectra()
+            .iter()
+            .map(|x| PySpectrum::new(x))
             .collect()
     }
 
@@ -104,7 +124,7 @@ impl TimsReader {
 
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
-        Ok(format!("{}(path=???)", class_name))
+        Ok(format!("{}(path={})", class_name, slf.borrow().path.clone()))
     }
     fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> Vec<f64> {
         let converter = slf.borrow()
@@ -117,19 +137,30 @@ impl TimsReader {
 
 #[pyclass]
 struct PySpectrum {
+    #[pyo3(get, set)]
     pub mz_values: Vec<f64>,
+    #[pyo3(get, set)]
     pub intensities: Vec<f64>,
+    #[pyo3(get, set)]
     pub index: usize,
+    #[pyo3(get, set)]
     pub precursor: PyPrecursor,
 }
 
+#[derive(Clone)]
 #[pyclass]
 struct PyPrecursor {
+    #[pyo3(get, set)]
     pub mz: f64,
+    #[pyo3(get, set)]
     pub im: f64,
+    #[pyo3(get, set)]
     pub charge: usize,
+    #[pyo3(get, set)]
     pub intensity: f64,
+    #[pyo3(get, set)]
     pub index: usize,
+    #[pyo3(get, set)]
     pub frame_index: usize,
 }
 
@@ -143,6 +174,30 @@ impl PyPrecursor {
             index: precursor.index.to_owned(),
             frame_index: precursor.frame_index.to_owned(),
         }
+    }
+
+    pub fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        let class_name: &str = slf.get_type().name()?;
+        Ok(format!(
+            "{}(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
+            class_name,
+            slf.borrow().index,
+            slf.borrow().frame_index,
+            slf.borrow().mz,
+            slf.borrow().im,
+            slf.borrow().charge,
+            slf.borrow().intensity,
+        ))
+    }
+}
+
+impl Display for PyPrecursor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
+            self.index, self.frame_index, self.mz, self.im, self.charge, self.intensity
+        )
     }
 }
 
@@ -168,13 +223,34 @@ impl PySpectrum {
     }
 }
 
+#[pymethods]
+impl PySpectrum {
+    fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
+        let class_name: &str = slf.get_type().name()?;
+        Ok(format!(
+            "{}(index={}, len(mz_values)={}, len(intensities)={}, precursor={})",
+            class_name,
+            slf.borrow().index,
+            slf.borrow().mz_values.len(),
+            slf.borrow().intensities.len(),
+            slf.borrow().precursor,
+        ))
+    }
+}
+
 #[pyclass]
 struct PyFrame {
+    #[pyo3(get, set)]
     pub scan_offsets: Vec<u64>,
+    #[pyo3(get, set)]
     pub tof_indices: Vec<u32>,
+    #[pyo3(get, set)]
     pub intensities: Vec<u32>,
+    #[pyo3(get, set)]
     pub index: usize,
+    #[pyo3(get, set)]
     pub rt: f64,
+    #[pyo3(get, set)]
     pub frame_type: u8,
 }
 
@@ -204,24 +280,6 @@ impl PyFrame {
 
 #[pymethods]
 impl PyFrame {
-    fn rt(&self) -> f64 {
-        self.rt
-    }
-    fn index(&self) -> usize {
-        self.index
-    }
-    fn frame_type(&self) -> u8 {
-        self.frame_type
-    }
-    fn scan_offsets(&self) -> Vec<u64> {
-        self.scan_offsets.to_owned()
-    }
-    fn tof_indices(&self) -> Vec<u32> {
-        self.tof_indices.to_owned()
-    }
-    fn intensities(&self) -> Vec<u32> {
-        self.intensities.to_owned()
-    }
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
         Ok(format!(
