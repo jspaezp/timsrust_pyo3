@@ -14,7 +14,27 @@ struct TimsReader {
     #[pyo3(get)]
     pub path: String,
     pub reader: timsrust::FileReader,
+    frame_converter: timsrust::Frame2RtConverter,
+    scan_converter: timsrust::Scan2ImConverter,
+    tof_converter: timsrust::Tof2MzConverter,
 }
+
+
+#[pyclass]
+struct Frame2RtConverter {
+    pub converter: timsrust::Frame2RtConverter,
+}
+
+#[pyclass]
+struct Scan2ImConverter {
+    pub converter: timsrust::Scan2ImConverter,
+}
+
+#[pyclass]
+struct Tof2MzConverter {
+    pub converter: timsrust::Tof2MzConverter,
+}
+
 
 #[pymethods]
 impl TimsReader {
@@ -22,29 +42,68 @@ impl TimsReader {
     fn new(path: String) -> PyResult<Self> {
         use pyo3::exceptions::PyIOError;
         let reader = timsrust::FileReader::new(&path);
-        match reader {
-            Ok(x) => Ok(TimsReader { reader: x, path: path }),
-            Err(_) => Err(PyIOError::new_err("Could not open file")),
+        let reader = match reader {
+            Ok(x) => x,
+            Err(_) => return Err(PyIOError::new_err("Could not open file")),
+        };
+        
+        let fc = reader.get_frame_converter();
+        let fc = match fc {
+            Ok(x) => x,
+            Err(_) => return Err(PyIOError::new_err("Could not get frame converter")),
+        };
+
+        let sc = reader.get_scan_converter();
+        let sc = match sc {
+            Ok(x) => x,
+            Err(_) => return Err(PyIOError::new_err("Could not get scan converter")),
+        };
+
+        let tc = reader.get_tof_converter();
+        let tc = match tc {
+            Ok(x) => x,
+            Err(_) => return Err(PyIOError::new_err("Could not get tof converter")),
+        };
+
+        Ok(TimsReader {
+            reader: reader,
+            path: path,
+            frame_converter: fc,
+            scan_converter: sc,
+            tof_converter: tc,
+        })
+
+    }
+
+    fn get_frame2rt_converter(&self) -> Frame2RtConverter {
+        Frame2RtConverter {
+            converter: self.reader.get_frame_converter().unwrap(),
         }
     }
+
+    fn get_scan2im_converter(&self) -> Scan2ImConverter {
+        Scan2ImConverter {
+            converter: self.reader.get_scan_converter().unwrap(),
+        }
+    }
+
+    fn get_tof_converter(&self) -> Tof2MzConverter {
+        Tof2MzConverter {
+            converter: self.reader.get_tof_converter().unwrap(),
+        }
+    }
+
+
+    fn read_frame(&self, index: usize) -> PyFrame {
+        PyFrame::new(&self.reader.read_single_frame(index))
+    }
+
     fn read_all_frames(&self) -> Vec<PyFrame> {
         self.reader
             .read_all_frames()
             .iter()
             .map(|x| PyFrame::new(x))
             .collect()
-    }
-
-    // fn read_scan(&self, index: usize) -> PySpectrum {
-    //     self.reader.read_all
-    // }
-
-    fn read_frame(&self, index: usize) -> PyFrame {
-        PyFrame::new(&self.reader.read_single_frame(index))
-    }
-
-    fn read_spectrum(&self, index: usize) -> PySpectrum {
-        PySpectrum::new(&self.reader.read_single_spectrum(index))
     }
 
     fn read_dia_frames(&self) -> Vec<PyFrame> {
@@ -69,6 +128,10 @@ impl TimsReader {
             .iter()
             .map(|x| PyFrame::new(x))
             .collect()
+    }
+
+    fn read_spectrum(&self, index: usize) -> PySpectrum {
+        PySpectrum::new(&self.reader.read_single_spectrum(index))
     }
 
     fn read_all_spectra(&self) -> Vec<PySpectrum> {
@@ -124,12 +187,20 @@ impl TimsReader {
         let class_name: &str = slf.get_type().name()?;
         Ok(format!("{}(path={})", class_name, slf.borrow().path.clone()))
     }
+
     fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> Vec<f64> {
-        let converter = slf.borrow()
-            .reader
-            .get_tof_converter().unwrap();
-        
+        let converter = &slf.borrow().tof_converter;
         tofs.iter().map(|x| converter.convert(*x)).collect()
+    }
+
+    fn resolve_scans(slf: &PyCell<Self>, ims:Vec<u32>) -> Vec<f64> {
+        let converter = &slf.borrow().scan_converter;
+        ims.iter().map(|x| converter.convert(*x)).collect()
+    }
+
+    fn resolve_frames(slf: &PyCell<Self>, rts: Vec<u32>) -> Vec<f64> {
+        let converter = &slf.borrow().frame_converter;
+        rts.iter().map(|x| converter.convert(*x)).collect()
     }
 }
 
@@ -295,10 +366,17 @@ impl PyFrame {
 
 #[pyfunction]
 fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
-    let fr = timsrust::FileReader::new(&a);
+    let fr = timsrust::FileReader::new(&a).unwrap();
+    let fc = fr.get_frame_converter().unwrap();
+    let sc = fr.get_scan_converter().unwrap();
+    let tc = fr.get_tof_converter().unwrap();
+
     let fr = TimsReader {
-        reader: fr.unwrap(),
+        reader: fr,
         path: a,
+        frame_converter: fc,
+        scan_converter: sc,
+        tof_converter: tc,
     };
 
     let out: Vec<PyFrame> = fr.read_all_frames();
