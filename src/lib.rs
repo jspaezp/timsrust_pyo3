@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
-use crate::timsrust::Spectrum;
+use crate::timsrust::ConvertableIndex;
 use crate::timsrust::Frame;
 use crate::timsrust::FrameType;
-use crate::timsrust::ConvertableIndex;
+use crate::timsrust::Spectrum;
 use pyo3::prelude::*;
 use timsrust;
 use timsrust::AcquisitionType;
@@ -18,7 +18,6 @@ struct TimsReader {
     scan_converter: timsrust::Scan2ImConverter,
     tof_converter: timsrust::Tof2MzConverter,
 }
-
 
 #[pyclass]
 struct Frame2RtConverter {
@@ -35,7 +34,6 @@ struct Tof2MzConverter {
     pub converter: timsrust::Tof2MzConverter,
 }
 
-
 #[pymethods]
 impl TimsReader {
     #[new]
@@ -46,7 +44,7 @@ impl TimsReader {
             Ok(x) => x,
             Err(_) => return Err(PyIOError::new_err("Could not open file")),
         };
-        
+
         let fc = reader.get_frame_converter();
         let fc = match fc {
             Ok(x) => x,
@@ -72,7 +70,6 @@ impl TimsReader {
             scan_converter: sc,
             tof_converter: tc,
         })
-
     }
 
     fn get_frame2rt_converter(&self) -> Frame2RtConverter {
@@ -93,7 +90,6 @@ impl TimsReader {
         }
     }
 
-
     fn read_frame(&self, index: usize) -> PyFrame {
         PyFrame::new(&self.reader.read_single_frame(index))
     }
@@ -110,16 +106,15 @@ impl TimsReader {
         self.reader
             .read_all_ms2_frames()
             .iter()
-            .map(|x| 
-                match x.frame_type {
-                    FrameType::MS2(AcquisitionType::DIAPASEF) => PyFrame::new(x),
-                    _ => PyFrame::new(&Frame::default()),
-                })
+            .map(|x| match x.frame_type {
+                FrameType::MS2(AcquisitionType::DIAPASEF) => PyFrame::new(x),
+                _ => PyFrame::new(&Frame::default()),
+            })
             .collect()
     }
 
     /// Reads all MS1 frames
-    /// 
+    ///
     /// Returns a vec with its length being all the frames in the data.
     /// BUT only parses the MS1 frames (all non-ms1 frames are returned as empty)
     fn read_ms1_frames(&self) -> Vec<PyFrame> {
@@ -142,50 +137,13 @@ impl TimsReader {
             .collect()
     }
 
-    // TODO implement on the python end
-    // fn dia_frame_table(&self) -> HashMap<String, Vec<usize>> {
-    //     let frametable = &self.reader.dia_frame_table;
-    //     let mut frametable_out: HashMap<String, Vec<usize>> = HashMap::new();
-
-    //     frametable_out.insert("frame".to_string(), frametable.frame.to_owned());
-    //     frametable_out.insert("group".to_string(), frametable.group.to_owned());
-
-    //     frametable_out
-    // }
-
-    // fn dia_frame_msms_windows(&self, py: Python) -> PyResult<PyObject> {
-    //     let msms_frame_window_table = &self.reader.dia_frame_msms_table;
-
-    //     let key_vals: &[(&str, PyObject)] = &[
-    //         (
-    //             "group",
-    //             msms_frame_window_table.group.to_owned().to_object(py),
-    //         ),
-    //         (
-    //             "scan_start",
-    //             msms_frame_window_table.scan_start.to_owned().to_object(py),
-    //         ),
-    //         (
-    //             "scan_end",
-    //             msms_frame_window_table.scan_end.to_owned().to_object(py),
-    //         ),
-    //         (
-    //             "mz_center",
-    //             msms_frame_window_table.mz_center.to_owned().to_object(py),
-    //         ),
-    //         (
-    //             "mz_width",
-    //             msms_frame_window_table.mz_width.to_owned().to_object(py),
-    //         ),
-    //     ];
-
-    //     let dict = key_vals.into_py_dict(py);
-    //     Ok(dict.into())
-    // }
-
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
-        Ok(format!("{}(path={})", class_name, slf.borrow().path.clone()))
+        Ok(format!(
+            "{}(path={})",
+            class_name,
+            slf.borrow().path.clone()
+        ))
     }
 
     fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> Vec<f64> {
@@ -193,7 +151,7 @@ impl TimsReader {
         tofs.iter().map(|x| converter.convert(*x)).collect()
     }
 
-    fn resolve_scans(slf: &PyCell<Self>, ims:Vec<u32>) -> Vec<f64> {
+    fn resolve_scans(slf: &PyCell<Self>, ims: Vec<u32>) -> Vec<f64> {
         let converter = &slf.borrow().scan_converter;
         ims.iter().map(|x| converter.convert(*x)).collect()
     }
@@ -327,13 +285,11 @@ impl PyFrame {
     fn new(frame: &Frame) -> Self {
         let frametype = match frame.frame_type {
             FrameType::MS1 => 0,
-            FrameType::MS2(x) => {
-                match x {
-                    AcquisitionType::DDAPASEF => 1,
-                    AcquisitionType::DIAPASEF => 2,
-                    AcquisitionType::Unknown => 3,
-                }
-            }
+            FrameType::MS2(x) => match x {
+                AcquisitionType::DDAPASEF => 1,
+                AcquisitionType::DIAPASEF => 2,
+                AcquisitionType::Unknown => 3,
+            },
             FrameType::Unknown => 3,
         };
         PyFrame {
