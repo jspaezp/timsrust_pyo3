@@ -1,6 +1,7 @@
 [package]
 name = "timsrust_pyo3"
-version = "0.1.0"
+version = "0.2.0"
+license = "Apache-2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,6 +11,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-# timsrust = "0.1.7"
-timsrust = {git = "https://github.com/jspaezp/timsrust"}
-# timsrust = { path = "../timsrust" }
+timsrust = "0.2.2"
