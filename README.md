@@ -7,7 +7,7 @@ I am happy to take requests and ideas.
 # Installation
 
 ```shell
-pip install git+https://github.com/jspaezp/timsrust_pyo3
+pip install timsrust_pyo3
 ```
 
 # Usage
@@ -18,7 +18,7 @@ pip install git+https://github.com/jspaezp/timsrust_pyo3
 >>> all_frames[0]
 PyFrame(index=1, rt=0.33491, frame_type=0, len(scan_offsets)=710, len(tof_indices)=242412, len(intensities)=242412)
 
->>> reader = timsrust_pyo3.TDFReader("some_file.d")
+>>> reader = timsrust_pyo3.TimsReader("some_file.d")
 >>> all_frames = reader.read_all_frames()
 >>> tfr.resolve_mzs(all_frames[0].tof_indices)
 [...] # list[float]
