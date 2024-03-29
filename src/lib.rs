@@ -135,7 +135,7 @@ impl TimsReader {
     fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
         Ok(format!(
-            "{}(path={})",
+            "{}(path='{}')",
             class_name,
             slf.borrow().path.clone()
         ))
@@ -217,7 +217,7 @@ impl Display for PyPrecursor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
+            "PyPrecursor(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
             self.index, self.frame_index, self.mz, self.im, self.charge, self.intensity
         )
     }
@@ -316,21 +316,21 @@ impl PyFrame {
 }
 
 #[pyfunction]
-fn read_all_frames(a: String) -> PyResult<Vec<PyFrame>> {
-    let fr = timsrust::FileReader::new(&a).unwrap();
-    let fc = fr.get_frame_converter().unwrap();
-    let sc = fr.get_scan_converter().unwrap();
-    let tc = fr.get_tof_converter().unwrap();
+fn read_all_frames(path: String) -> PyResult<Vec<PyFrame>> {
+    let reader = timsrust::FileReader::new(&path).unwrap();
+    let fc = reader.get_frame_converter().unwrap();
+    let sc = reader.get_scan_converter().unwrap();
+    let tc = reader.get_tof_converter().unwrap();
 
-    let fr = TimsReader {
-        reader: fr,
-        path: a,
+    let tims_reader = TimsReader {
+        reader,
+        path,
         frame_converter: fc,
         scan_converter: sc,
         tof_converter: tc,
     };
 
-    let out: Vec<PyFrame> = fr.read_all_frames();
+    let out: Vec<PyFrame> = tims_reader.read_all_frames();
     Ok(out)
 }
 
