@@ -38,36 +38,32 @@ impl TimsReader {
     #[new]
     fn new(path: String) -> PyResult<Self> {
         use pyo3::exceptions::PyIOError;
-        let reader = timsrust::FileReader::new(&path);
-        let reader = match reader {
+        let reader = match timsrust::FileReader::new(&path) {
             Ok(x) => x,
             Err(_) => return Err(PyIOError::new_err("Could not open file")),
         };
 
-        let fc = reader.get_frame_converter();
-        let fc = match fc {
+        let frame_converter = match reader.get_frame_converter() {
             Ok(x) => x,
-            Err(_) => return Err(PyIOError::new_err("Could not get frame converter")),
+            Err(e) => return Err(PyIOError::new_err(format!("Could not get frame converter: {e}"))),
         };
 
-        let sc = reader.get_scan_converter();
-        let sc = match sc {
+        let scan_converter = match reader.get_scan_converter() {
             Ok(x) => x,
-            Err(_) => return Err(PyIOError::new_err("Could not get scan converter")),
+            Err(e) => return Err(PyIOError::new_err(format!("Could not get scan converter: {e}"))),
         };
 
-        let tc = reader.get_tof_converter();
-        let tc = match tc {
+        let tof_converter = match reader.get_tof_converter() {
             Ok(x) => x,
-            Err(_) => return Err(PyIOError::new_err("Could not get tof converter")),
+            Err(e) => return Err(PyIOError::new_err(format!("Could not get tof converter: {e}"))),
         };
 
         Ok(TimsReader {
             reader,
             path,
-            frame_converter: fc,
-            scan_converter: sc,
-            tof_converter: tc,
+            frame_converter,
+            scan_converter,
+            tof_converter,
         })
     }
 
