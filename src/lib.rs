@@ -1,16 +1,15 @@
 use std::fmt::Display;
 
-use crate::timsrust::ConvertableIndex;
-use crate::timsrust::Frame;
-use crate::timsrust::FrameType;
-use crate::timsrust::Spectrum;
 use pyo3::prelude::*;
-use timsrust;
 use timsrust::AcquisitionType;
+use timsrust::ConvertableIndex;
+use timsrust::Frame;
+use timsrust::FrameType;
 use timsrust::QuadrupoleEvent;
+use timsrust::Spectrum;
 
 #[pyclass]
-struct TimsReader {
+pub struct TimsReader {
     #[pyo3(get)]
     pub path: String,
     pub reader: timsrust::FileReader,
@@ -20,17 +19,17 @@ struct TimsReader {
 }
 
 #[pyclass]
-struct Frame2RtConverter {
+pub struct Frame2RtConverter {
     pub converter: timsrust::Frame2RtConverter,
 }
 
 #[pyclass]
-struct Scan2ImConverter {
+pub struct Scan2ImConverter {
     pub converter: timsrust::Scan2ImConverter,
 }
 
 #[pyclass]
-struct Tof2MzConverter {
+pub struct Tof2MzConverter {
     pub converter: timsrust::Tof2MzConverter,
 }
 
@@ -64,8 +63,8 @@ impl TimsReader {
         };
 
         Ok(TimsReader {
-            reader: reader,
-            path: path,
+            reader,
+            path,
             frame_converter: fc,
             scan_converter: sc,
             tof_converter: tc,
@@ -98,7 +97,7 @@ impl TimsReader {
         self.reader
             .read_all_frames()
             .iter()
-            .map(|x| PyFrame::new(x))
+            .map(PyFrame::new)
             .collect()
     }
 
@@ -121,7 +120,7 @@ impl TimsReader {
         self.reader
             .read_all_ms1_frames()
             .iter()
-            .map(|x| PyFrame::new(x))
+            .map(PyFrame::new)
             .collect()
     }
 
@@ -133,7 +132,7 @@ impl TimsReader {
         self.reader
             .read_all_spectra()
             .iter()
-            .map(|x| PySpectrum::new(x))
+            .map(PySpectrum::new)
             .collect()
     }
 
@@ -245,7 +244,7 @@ impl PySpectrum {
             mz_values: scan.mz_values.to_owned(),
             intensities: scan.intensities.to_owned(),
             index: scan.index.to_owned(),
-            precursor: precursor,
+            precursor,
         }
     }
 }
@@ -283,7 +282,7 @@ struct PyFrame {
 
 impl PyFrame {
     fn new(frame: &Frame) -> Self {
-        let frametype = match frame.frame_type {
+        let frame_type = match frame.frame_type {
             FrameType::MS1 => 0,
             FrameType::MS2(x) => match x {
                 AcquisitionType::DDAPASEF => 1,
@@ -298,7 +297,7 @@ impl PyFrame {
             intensities: frame.intensities.to_owned(),
             index: frame.index.to_owned(),
             rt: frame.rt.to_owned(),
-            frame_type: frametype,
+            frame_type,
         }
     }
 }
