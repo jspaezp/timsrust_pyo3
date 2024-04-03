@@ -31,9 +31,13 @@ def test_file_reader(shared_datadir):
 
 
 def test_minitdf_file_reading(shared_datadir):
-    file = str(shared_datadir / "test.ms2")
+    file = str(shared_datadir / "test_renamed.ms2")
+    # file = str(shared_datadir / "test.ms2") # Broken ...
     reader = timsrust_pyo3.TimsReader(file)
-    _specs = reader.read_all_spectra()
+    specs = reader.read_all_spectra()
+    assert len(specs) == 3
+    assert specs[0].intensities[0] == 350.0
+    assert abs(specs[0].mz_values[0] - 190.10706) < 1e-5
 
 
 def test_dda_file_reading(shared_datadir):
