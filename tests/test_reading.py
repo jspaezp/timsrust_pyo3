@@ -30,6 +30,12 @@ def test_file_reader(shared_datadir):
     assert len(ms1_frames) == len(dia_frames)
 
 
+def test_minitdf_file_reading(shared_datadir):
+    file = str(shared_datadir / "test.ms2")
+    reader = timsrust_pyo3.TimsReader(file)
+    _specs = reader.read_all_spectra()
+
+
 def test_dda_file_reading(shared_datadir):
     file = str(shared_datadir / "dda_test.d")
     reader = timsrust_pyo3.TimsReader(file)
