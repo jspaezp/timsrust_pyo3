@@ -119,10 +119,10 @@ impl TimsReader {
     }
 
     fn resolve_mzs(slf: &PyCell<Self>, tofs: Vec<u32>) -> PyResult<Vec<f64>> {
-        match &slf.borrow().reader.get_frame_converter() {
+        match &slf.borrow().reader.get_tof_converter() {
             Ok(c) => Ok(tofs.iter().map(|x| c.convert(*x)).collect()),
             Err(e) => Err(PyIOError::new_err(format!(
-                "Could not get frame converter: {e}"
+                "Could not get TOF converter: {e}"
             ))),
         }
     }
@@ -307,10 +307,7 @@ impl PyFrame {
 #[pyfunction]
 fn read_all_frames(path: String) -> PyResult<Vec<PyFrame>> {
     let reader = timsrust::FileReader::new(&path).unwrap();
-    let tims_reader = TimsReader {
-        reader,
-        path,
-    };
+    let tims_reader = TimsReader { reader, path };
     let out: Vec<PyFrame> = tims_reader.read_all_frames();
     Ok(out)
 }
