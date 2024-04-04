@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+import pytest
 import sqlite3
 import timsrust_pyo3
 
@@ -28,6 +30,30 @@ def test_file_reader(shared_datadir):
     assert all(isinstance(f, timsrust_pyo3.PyFrame) for f in ms1_frames)
     assert len(ms1_frames) == len(all_frames)
     assert len(ms1_frames) == len(dia_frames)
+
+
+EXPECTATIONS = {
+    "test.ms2": {
+        "n_spectra": 3,
+        "first_mzs": [190.10706],
+        "first_intensities": [350.0],
+    },
+    "test2.ms2": {
+        "n_spectra": 2,
+        "first_mzs": [100.0, 200.002, 300.03, 400.4],
+        "first_intensities": [1.0, 2.0, 3.0, 4.0],
+    },
+}
+
+
+@pytest.mark.parametrize("file", ["test.ms2", "test2.ms2"])
+def test_minitdf_file_reading(shared_datadir, file):
+    datafile = str(shared_datadir / file)
+    reader = timsrust_pyo3.TimsReader(datafile)
+    specs = reader.read_all_spectra()
+    assert len(specs) == EXPECTATIONS[file]["n_spectra"]
+    assert specs[0].mz_values == EXPECTATIONS[file]["first_mzs"]
+    assert specs[0].intensities == EXPECTATIONS[file]["first_intensities"]
 
 
 def test_dda_file_reading(shared_datadir):
