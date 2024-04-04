@@ -122,7 +122,7 @@ impl TimsReader {
         match &slf.borrow().reader.get_tof_converter() {
             Ok(c) => Ok(tofs.iter().map(|x| c.convert(*x)).collect()),
             Err(e) => Err(PyIOError::new_err(format!(
-                "Could not get frame converter: {e}"
+                "Could not get TOF converter: {e}"
             ))),
         }
     }
