@@ -164,6 +164,8 @@ struct PyPrecursor {
     #[pyo3(get, set)]
     pub mz: f64,
     #[pyo3(get, set)]
+    pub rt: f64,
+    #[pyo3(get, set)]
     pub im: f64,
     #[pyo3(get, set)]
     pub charge: usize,
@@ -179,6 +181,7 @@ impl PyPrecursor {
     fn new(precursor: &timsrust::Precursor) -> Self {
         PyPrecursor {
             mz: precursor.mz.to_owned(),
+            rt: precursor.rt.to_owned(),
             im: precursor.im.to_owned(),
             charge: precursor.charge.to_owned(),
             intensity: precursor.intensity.to_owned(),
@@ -190,11 +193,12 @@ impl PyPrecursor {
     pub fn __repr__(slf: &PyCell<Self>) -> PyResult<String> {
         let class_name: &str = slf.get_type().name()?;
         Ok(format!(
-            "{}(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
+            "{}(index={}, frame_index={}, mz={}, rt={}, im={}, charge={}, intensity={})",
             class_name,
             slf.borrow().index,
             slf.borrow().frame_index,
             slf.borrow().mz,
+            slf.borrow().rt,
             slf.borrow().im,
             slf.borrow().charge,
             slf.borrow().intensity,
@@ -206,8 +210,8 @@ impl Display for PyPrecursor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "PyPrecursor(index={}, frame_index={}, mz={}, im={}, charge={}, intensity={})",
-            self.index, self.frame_index, self.mz, self.im, self.charge, self.intensity
+            "PyPrecursor(index={}, frame_index={}, mz={}, rt={}, im={}, charge={}, intensity={})",
+            self.index, self.frame_index, self.mz, self.rt, self.im, self.charge, self.intensity
         )
     }
 }
@@ -218,6 +222,7 @@ impl PySpectrum {
             QuadrupoleEvent::Precursor(x) => PyPrecursor::new(&x),
             QuadrupoleEvent::None => PyPrecursor {
                 mz: 0.0,
+                rt: 0.0,
                 im: 0.0,
                 charge: 0,
                 intensity: 0.0,
