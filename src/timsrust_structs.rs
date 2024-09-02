@@ -34,14 +34,31 @@ impl Display for PyQuadrupoleSettings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "QuadrupoleSettings(index={}, len(scan_starts)={}, len(scan_ends)={}, len(isolation_mz)={}, len(isolation_width)={}, len(collision_energy)={})",
+            "QuadrupoleSettings(index={}, scan_starts={}, scan_ends={}, isolation_mz={}, isolation_width={}, collision_energy={})",
             self.index,
-            self.scan_starts.len(),
-            self.scan_ends.len(),
-            self.isolation_mz.len(),
-            self.isolation_width.len(),
-            self.collision_energy.len(),
+            format_slice(&self.scan_starts),
+            format_slice(&self.scan_ends),
+            format_slice(&self.isolation_mz),
+            format_slice(&self.isolation_width),
+            format_slice(&self.collision_energy),
         )
+    }
+}
+
+#[pymethods]
+impl PyQuadrupoleSettings {
+    pub fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let class_name: Bound<'_, PyString> = slf.get_type().qualname()?;
+        Ok(format!(
+            "{}(index={}, scan_starts={}, scan_ends={}, isolation_mz={}, isolation_width={}, collision_energy={})",
+            class_name,
+            slf.borrow().index,
+            format_slice(&slf.borrow().scan_starts),
+            format_slice(&slf.borrow().scan_ends),
+            format_slice(&slf.borrow().isolation_mz),
+            format_slice(&slf.borrow().isolation_width),
+            format_slice(&slf.borrow().collision_energy),
+        ))
     }
 }
 
@@ -116,7 +133,7 @@ impl From<&Frame> for PyFrame {
 impl PyFrame {
     pub fn __repr__(&self) -> String {
         let start_section = format!(
-            "Frame(index={}, rt={}, acquisition_type={}, ms_level={}, quadrupole_settings={}, intensity_correction_factor={}",
+            "index={}, rt={}, acquisition_type={}, ms_level={}, quadrupole_settings={}, intensity_correction_factor={}",
             self.index,
             self.rt,
             self.acquisition_type,
@@ -124,13 +141,20 @@ impl PyFrame {
             self.quadrupole_settings,
             self.intensity_correction_factor,
         );
-        let len_section = format!(
-            "len(scan_offsets)={}, len(tof_indices)={}, len(intensities)={}",
-            self.scan_offsets.len(),
-            self.tof_indices.len(),
-            self.intensities.len(),
+        let arr_section = format!(
+            "\n scan_offsets={},\n tof_indices={},\n intensities={}",
+            format_slice(&self.scan_offsets),
+            format_slice(&self.tof_indices),
+            format_slice(&self.intensities),
         );
-        format!("{start_section}, {len_section})")
+        format!("Frame({arr_section},\n {start_section})")
+    }
+
+    fn get_corrected_intensities(&self) -> Vec<f64> {
+        self.intensities
+            .iter()
+            .map(|x| *x as f64 * self.intensity_correction_factor)
+            .collect()
     }
 }
 
@@ -173,19 +197,16 @@ impl PySpectrum {
 impl PySpectrum {
     pub fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
         let class_name: Bound<'_, PyString> = slf.get_type().qualname()?;
-        let max_show = slf.borrow().mz_values.len().min(10);
         Ok(format!(
-            "{}(mz_values=[{}] len={}, intensities=[{}] len = {}, precursor={}, index={}, collision_energy={}, isolation_mz={}, isolation_width={})",
+            "{}(\n index={},\n mz_values={},\n intensities={},\n precursor={},\n collision_energy={}, isolation_mz={}, isolation_width={})",
             class_name,
-            slf.borrow().mz_values[..max_show].iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(", "),
-            slf.borrow().mz_values.len(),
-            slf.borrow().intensities[..max_show].iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(", "),
-            slf.borrow().intensities.len(),
+            slf.borrow().index,
+            format_slice(&slf.borrow().mz_values),
+            format_slice(&slf.borrow().intensities),
             match &slf.borrow().precursor {
                 Some(x) => format!("{}", x),
                 None => "None".to_string(),
             },
-            slf.borrow().index,
             slf.borrow().collision_energy,
             slf.borrow().isolation_mz,
             slf.borrow().isolation_width,
@@ -352,5 +373,30 @@ impl PyPrecursor {
                 None => "None".to_string(),
             },
         ))
+    }
+}
+
+fn format_slice<T>(slc: &[T]) -> String
+where
+    T: Display,
+{
+    if slc.len() <= 10 {
+        format!(
+            "[{}]",
+            slc.iter()
+                .map(|x| format!("{}", x))
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    } else {
+        format!(
+            "[{}...len={}]",
+            slc[..10]
+                .iter()
+                .map(|x| format!("{}", x))
+                .collect::<Vec<String>>()
+                .join(", "),
+            slc.len()
+        )
     }
 }

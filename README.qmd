@@ -1,0 +1,73 @@
+---
+title: "timsrust_pyo3"
+format: gfm
+---
+
+# Python bindings to the timsrust reader
+
+Read bruker data files using python with the speed of rust!
+
+```shell
+# pip install timsrust_pyo3
+```
+
+## Usage
+
+If what you want is to read spectra from a file, you can use the `read_all_spectra` function.
+
+```{python}
+import timsrust_pyo3
+
+datafile = "tests/data/230711_idleflow_400-1000mz_25mz_diaPasef_10sec.d"
+specs = timsrust_pyo3.read_all_spectra(datafile)
+```
+
+This will return a list of `Spectrum` objects. Which are the results of "flattening" the frames
+into its individual isolation windows.
+
+```{python}
+specs[0]
+```
+
+This shoudl work fine for a lot of cases.
+
+If you want a more ... raw representation of the data, we can use the `FrameReader` class.
+
+
+```{python}
+reader = timsrust_pyo3.FrameReader(datafile)
+all_frames = reader.read_all_frames()
+print(all_frames[0])
+print(all_frames[1])
+```
+
+Note that here each frame does not have mz and ion mobility values.
+
+lets start with the easy one ... each tof index can be converted
+to a mz value using the `Metadata` class.
+
+```{python}
+# We point the metadata to the analysis.tdf file
+metadata = timsrust_pyo3.Metadata(datafile + "/analysis.tdf")
+mzs = metadata.resolve_mzs(all_frames[0].tof_indices)
+print(all_frames[0].tof_indices[:5])
+print(" Becomes >>>> ")
+print(mzs[:5])
+```
+
+Now the harder one ... ion mobility ...
+
+This is because each frame stores the mobility information by using
+the `scan_offsets` ... which means ... all peaks from `scan_offsets[0]`
+to `scan_offsets[1]` are from the same scan, and thus have the same
+ion mobility. and the 1/k0 value of that scan (0) can be converted
+as well by using the `Metadata` class.
+
+```{python}
+scans = metadata.resolve_scans([1,2,3, 700])
+print(" [1,2,3] Becomes >>>> ")
+print(scans)
+```
+
+Note that since the tims funnel "elutes" values with larger 1/k0 first,
+the first scan is actually the one with highest 1/k0.

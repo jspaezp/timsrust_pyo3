@@ -37,28 +37,57 @@ EXPECTATIONS = {
         "n_spectra": 3,
         "first_mzs": [190.10706],
         "first_intensities": [350.0],
+        "first_precursor": {
+            "mz": 500.0,
+            "rt": 0.1,
+            "im": 1.3,
+            "charge": 2,
+            "intensity": 0,
+        },
     },
     "test2.ms2": {
         "n_spectra": 2,
         "first_mzs": [100.0, 200.002, 300.03, 400.4],
         "first_intensities": [1.0, 2.0, 3.0, 4.0],
+        "first_precursor": {
+            "mz": 123.4567,
+            "rt": 12.345,
+            "im": 1.234,
+            "charge": 1,
+            "intensity": 0,
+        },
+    },
+    "dda_test.d": {
+        "n_spectra": 3,
+        "first_mzs": [199.7633445943076],
+        "first_intensities": [162],
+        "first_precursor": {
+            "mz": 500.0,
+            "rt": 0.2,
+            "im": 1.25,
+            "charge": 2,
+            "intensity": 10,
+        },
     },
 }
 
 
-@pytest.mark.parametrize("file", ["test.ms2", "test2.ms2"])
+@pytest.mark.parametrize("file", ["test.ms2", "test2.ms2", "dda_test.d"])
 def test_minitdf_file_reading(shared_datadir, file):
     datafile = str(shared_datadir / file)
     specs = timsrust_pyo3.read_all_spectra(datafile)
+
     assert len(specs) == EXPECTATIONS[file]["n_spectra"]
     assert specs[0].mz_values == EXPECTATIONS[file]["first_mzs"]
     assert specs[0].intensities == EXPECTATIONS[file]["first_intensities"]
-
-
-def test_dda_file_reading(shared_datadir):
-    file = str(shared_datadir / "dda_test.d")
-    specs = timsrust_pyo3.read_all_spectra(file)
-    assert len(specs) > 0
+    assert specs[0].precursor.mz == EXPECTATIONS[file]["first_precursor"]["mz"]
+    assert specs[0].precursor.rt == EXPECTATIONS[file]["first_precursor"]["rt"]
+    assert specs[0].precursor.im == EXPECTATIONS[file]["first_precursor"]["im"]
+    assert specs[0].precursor.charge == EXPECTATIONS[file]["first_precursor"]["charge"]
+    assert (
+        specs[0].precursor.intensity
+        == EXPECTATIONS[file]["first_precursor"]["intensity"]
+    )
 
 
 def test_mz_resolution(shared_datadir):

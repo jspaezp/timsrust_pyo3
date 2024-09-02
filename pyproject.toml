@@ -22,6 +22,12 @@ lint = [
   "black",
   "ruff"
 ]
+doc = [
+  "pyyaml",
+  "ipykernel",
+  "nbformat",
+  "nbclient",
+]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
