@@ -1,154 +1,97 @@
+# timsrust_pyo3
+
 
 # Python bindings to the timsrust reader
 
-This is a prototype/work in progress/proof of concept.
-I am happy to take requests and ideas.
+Read bruker data files using python with the speed of rust!
 
-# Installation
-
-```shell
-pip install timsrust_pyo3
+``` shell
+# pip install timsrust_pyo3
 ```
 
-# Usage
+## Usage
 
-```python
->>> import timsrust_pyo3
->>> all_frames = timsrust_pyo3.read_all_frames("some_file.d")
->>> all_frames[0]
-PyFrame(index=1, rt=0.33491, frame_type=0, len(scan_offsets)=710, len(tof_indices)=242412, len(intensities)=242412)
+If what you want is to read spectra from a file, you can use the
+`read_all_spectra` function.
 
->>> reader = timsrust_pyo3.TimsReader("some_file.d")
->>> all_frames = reader.read_all_frames()
->>> tfr.resolve_mzs(all_frames[0].tof_indices)
-[...] # list[float]
+``` python
+import timsrust_pyo3
+
+datafile = "tests/data/230711_idleflow_400-1000mz_25mz_diaPasef_10sec.d"
+specs = timsrust_pyo3.read_all_spectra(datafile)
 ```
 
-Notes:
-1. Frame types are:
-    - 0: MS1
-    - 1: MS2-DDA-PASEF
-    - 2: MS2-DIA-PASEF
-    - 3: UNKNOWN (either ms1 or ms2)
+This will return a list of `Spectrum` objects. Which are the results of
+“flattening” the frames into its individual isolation windows.
 
-## Making a dense representation of the frames
-
-```python
-
-@dataclass
-class DenseFrame:
-    rt: float
-    intensities: list[int]
-    mzs: list[float]
-    imss: list[float]
-
-    @classmethod
-    def from_frame(
-        cls, frame: timsrust_pyo3.PyFrame, reader: timsrust_pyo3.TimsReader
-    ):
-        mzs = reader.resolve_mzs(frame.tof_indices)
-        out_imss = [None] * len(mzs)
-        last_so = 0
-        for ims, so in zip(
-            reader.resolve_scans(list(range(1, len(frame.scan_offsets) + 1))),
-            frame.scan_offsets,
-            strict=True,
-        ):
-            out_imss[last_so:so] = [ims] * (so - last_so)
-            last_so = so
-
-        return cls(
-            rt=frame.rt,
-            intensities=frame.intensities,
-            mzs=mzs,
-            imss=out_imss,
-        )
-
-file =  "my_favourite_dotd.d"
-reader = timsrust_pyo3.TimsReader(file)
-allframes = reader.read_all_frames()
-
-df = DenseFrame.from_frame(allframes[0], reader)
+``` python
+specs[0]
 ```
 
-## Getting the isolation window information for DIA
+    Spectrum(
+     index=0,
+     mz_values=[116.25158757494638, 118.9080472754818, 141.8956868151955, 167.55719727130426, 195.07915917591367, 232.07843727809686, 256.9100001557801, 267.30801795707947, 272.49521871359474, 274.26560752950985...len=1599],
+     intensities=[9, 9, 9, 9, 9, 9, 9, 9, 9, 9...len=1599],
+     precursor=Precursor(mz=812.5, rt=0.4161, im=1.1620169252468266, charge=None, intensity=None),
+     collision_energy=42.80258899676376, isolation_mz=812.5, isolation_width=25)
 
-Right now the best way to get this is using raw sql.
-We need to read the `analysis.tdf` file and do the equivalent of
-a double join using the frame index from a frame, the `DiaFrameMsMsInfo` and the `DiaFrameMsMsWindows` table.
+This shoudl work fine for a lot of cases.
 
+If you want a more … raw representation of the data, we can use the
+`FrameReader` class.
 
-This is more or less how the `DiaFrameMsMsWindows` table looks like:
-
-```
-WindowGroup	ScanNumBegin	ScanNumEnd	IsolationMz	IsolationWidth	CollisionEnergy
-1	34	370	812.5	25.0	42.8025889967638
-1	370	535	612.5	25.0	32.2847896440129
-1	535	708	412.5	25.0	25.1747572815534
-2	34	342	837.5	25.0	43.3915857605178
-2	342	517	637.5	25.0	33.252427184466
-...
-```
-
-And this is how the `DiaFrameMsMsInfo` table looks like:
-
-```
-Frame	WindowGroup
-2	1
-3	2
-4	3
-5	4
-6	5
+``` python
+reader = timsrust_pyo3.FrameReader(datafile)
+all_frames = reader.read_all_frames()
+print(all_frames[0])
+print(all_frames[1])
 ```
 
-```python
-import sqlite3
-from dataclasses import dataclass
+    Frame(
+     scan_offsets=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0...len=710],
+     tof_indices=[7269, 226179, 238688, 283353, 302607, 313423, 320067, 325868, 333879, 334217...len=242412],
+     intensities=[20, 35, 20, 89, 45, 115, 57, 57, 113, 98...len=242412],
+     index=1, rt=0.33491, acquisition_type=DIAPASEF, ms_level=MS1, quadrupole_settings=QuadrupoleSettings(index=0, scan_starts=[], scan_ends=[], isolation_mz=[], isolation_width=[], collision_energy=[]), intensity_correction_factor=0.013324805457840315)
+    Frame(
+     scan_offsets=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0...len=710],
+     tof_indices=[278272, 230453, 89438, 376113, 223326, 110881, 66872, 316096, 353458, 135560...len=4501],
+     intensities=[9, 9, 9, 9, 71, 9, 9, 9, 9, 9...len=4501],
+     index=2, rt=0.4161, acquisition_type=DIAPASEF, ms_level=MS2, quadrupole_settings=QuadrupoleSettings(index=1, scan_starts=[34, 370, 535], scan_ends=[370, 535, 708], isolation_mz=[812.5, 612.5, 412.5], isolation_width=[25, 25, 25], collision_energy=[42.80258899676376, 32.284789644012946, 25.174757281553397]), intensity_correction_factor=0.013324805457840315)
 
-@dataclass
-class DiaWindow:
-    group: int
-    scan_begin: int
-    scan_end: int
-    isolation_mz: float
-    isolation_width: float
-    collision_energy: float
+Note that here each frame does not have mz and ion mobility values.
 
-    @classmethod
-    def mapping_from_sql(cls, sql_file):
-        conn = sqlite3.connect(file)
-        curr = conn.cursor()
-        window_data = curr.execute("SELECT * FROM DiaFrameMsMsWindows").fetchall()
-        info_data = curr.execute("SELECT * FROM DiaFrameMsMsInfo").fetchall()
-        index_to_group = {frame: group for frame, group in info_data}
+lets start with the easy one … each tof index can be converted to a mz
+value using the `Metadata` class.
 
-        group_to_windows = {}
-
-        for group, *window in window_data:
-            window_data = DiaWindow(group, *window)
-            group_to_windows.setdefault(group, []).append(window_data)
-
-        return index_to_group, group_to_windows
-
-file =  "my_favourite_dotd.d"
-
-index_to_group, group_to_windows = DiaWindow.mapping_from_sql(file + "/analysis.tdf")
-reader = timsrust_pyo3.TimsReader(file)
-allframes = reader.read_all_frames()
-dia_frames = [f for f in allframes if f.frame_type == 2]
-example_frame = dia_frames[0]
-
-mz_ranges = {}
-
-for w in group_to_windows[index_to_group[example_frame.index]]:
-    mz_low = w.isolation_mz - w.isolation_width
-    mz_high = w.isolation_mz + w.isolation_width
-    matching_offsets = example_frame.scan_offsets[w.scan_begin : w.scan_end]
-
-    scan_range = range(matching_offsets[0], matching_offsets[-1])
-    mz_ranges[(mz_low, mz_high)] = scan_range
-
-mz_ranges
-# {(787.5, 837.5): range(0, 1753), (587.5, 637.5): range(1772, 3637), (387.5, 437.5): range(3638, 4487)}
-# This means that the values in example_frame.intensities[0:1753] correspond to the mz range 787.5-837.5
+``` python
+# We point the metadata to the analysis.tdf file
+metadata = timsrust_pyo3.Metadata(datafile + "/analysis.tdf")
+mzs = metadata.resolve_mzs(all_frames[0].tof_indices)
+print(all_frames[0].tof_indices[:5])
+print(" Becomes >>>> ")
+print(mzs[:5])
 ```
+
+    [7269, 226179, 238688, 283353, 302607]
+     Becomes >>>>
+    [111.70270406113804, 767.4671439486657, 822.673531755788, 1035.4396805033862, 1134.6976413752595]
+
+Now the harder one … ion mobility …
+
+This is because each frame stores the mobility information by using the
+`scan_offsets` … which means … all peaks from `scan_offsets[0]` to
+`scan_offsets[1]` are from the same scan, and thus have the same ion
+mobility. and the 1/k0 value of that scan (0) can be converted as well
+by using the `Metadata` class.
+
+``` python
+scans = metadata.resolve_scans([1,2,3, 700])
+print(" [1,2,3] Becomes >>>> ")
+print(scans)
+```
+
+     [1,2,3] Becomes >>>>
+    [1.3689703808180538, 1.3679407616361072, 1.366911142454161, 0.6492665726375176]
+
+Note that since the tims funnel “elutes” values with larger 1/k0 first,
+the first scan is actually the one with highest 1/k0.
