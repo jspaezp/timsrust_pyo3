@@ -7,13 +7,13 @@ use pyo3::exceptions::PyIOError;
 use pyo3::prelude::*;
 
 use crate::timsrust_enums::{PyAcquisitionType, PyMSLevel};
-use crate::timsrust_readers::PyFrameReader;
+use crate::timsrust_readers::{PyFrameReader, PySpectrumReader};
 use crate::timsrust_structs::{PyFrame, PyMetadata, PyPrecursor, PyQuadrupoleSettings, PySpectrum};
 
 #[pyfunction]
 fn read_all_frames(path: String) -> PyResult<Vec<PyFrame>> {
     let reader = timsrust::readers::FrameReader::new(&path).unwrap();
-    let tims_reader = PyFrameReader { reader };
+    let tims_reader = PyFrameReader { reader, i: 0 };
     tims_reader.read_all_frames()
 }
 
@@ -29,9 +29,9 @@ fn read_all_spectra(path: String) -> PyResult<Vec<PySpectrum>> {
     let reader = reader.unwrap();
     reader
         .get_all()
-        .iter()
+        .into_iter()
         .map(|x| match x {
-            Ok(x) => Ok(PySpectrum::new(x)),
+            Ok(x) => Ok(PySpectrum::from(x)),
             Err(e) => Err(PyIOError::new_err(e.to_string())),
         })
         .collect()
@@ -43,6 +43,7 @@ fn timsrust_pyo3(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(read_all_spectra, m)?)?;
     m.add_class::<PyFrame>()?;
     m.add_class::<PyFrameReader>()?;
+    m.add_class::<PySpectrumReader>()?;
     m.add_class::<PyMetadata>()?;
     m.add_class::<PyPrecursor>()?;
     m.add_class::<PyQuadrupoleSettings>()?;
