@@ -35,9 +35,7 @@ pub struct PyScan2ImConverter {
 
 impl From<&Scan2ImConverter> for PyScan2ImConverter {
     fn from(x: &Scan2ImConverter) -> Self {
-        PyScan2ImConverter {
-            converter: x.clone(),
-        }
+        PyScan2ImConverter { converter: *x }
     }
 }
 
@@ -58,9 +56,7 @@ pub struct PyTof2MzConverter {
 
 impl From<&Tof2MzConverter> for PyTof2MzConverter {
     fn from(x: &Tof2MzConverter) -> Self {
-        PyTof2MzConverter {
-            converter: x.clone(),
-        }
+        PyTof2MzConverter { converter: *x }
     }
 }
 

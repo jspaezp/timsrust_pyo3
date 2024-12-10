@@ -110,15 +110,15 @@ pub struct PyFrame {
     pub intensity_correction_factor: f64,
 }
 
-impl From<&Frame> for PyFrame {
-    fn from(frame: &Frame) -> Self {
+impl From<Frame> for PyFrame {
+    fn from(frame: Frame) -> Self {
         let acquisition_type = PyAcquisitionType::from(&frame.acquisition_type);
         let ms_level = PyMSLevel::from(&frame.ms_level);
         let quadrupole_settings = PyQuadrupoleSettings::from(frame.quadrupole_settings.clone());
         PyFrame {
-            scan_offsets: frame.scan_offsets.to_owned(),
-            tof_indices: frame.tof_indices.to_owned(),
-            intensities: frame.intensities.to_owned(),
+            scan_offsets: frame.scan_offsets,
+            tof_indices: frame.tof_indices,
+            intensities: frame.intensities,
             index: frame.index,
             rt: frame.rt,
             acquisition_type,
@@ -176,19 +176,19 @@ pub struct PySpectrum {
     pub isolation_width: f64,
 }
 
-impl PySpectrum {
-    pub fn new(spectrum: &Spectrum) -> Self {
+impl From<Spectrum> for PySpectrum {
+    fn from(spectrum: Spectrum) -> Self {
         PySpectrum {
-            mz_values: spectrum.mz_values.to_owned(),
-            intensities: spectrum.intensities.to_owned(),
+            mz_values: spectrum.mz_values,
+            intensities: spectrum.intensities,
             precursor: match &spectrum.precursor {
                 Some(x) => Some(PyPrecursor::new(x)),
                 None => None,
             },
-            index: spectrum.index.to_owned(),
-            collision_energy: spectrum.collision_energy.to_owned(),
-            isolation_mz: spectrum.isolation_mz.to_owned(),
-            isolation_width: spectrum.isolation_width.to_owned(),
+            index: spectrum.index,
+            collision_energy: spectrum.collision_energy,
+            isolation_mz: spectrum.isolation_mz,
+            isolation_width: spectrum.isolation_width,
         }
     }
 }
